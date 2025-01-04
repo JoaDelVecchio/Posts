@@ -57,7 +57,7 @@ const updatePost = (req, res, next) => {
     return next(error);
   }
   post.title = req.body.title;
-  res.status(200).json(posts);
+  res.status(200).json(post);
 };
 
 // @desc Delete post

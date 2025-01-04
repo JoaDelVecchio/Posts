@@ -3,7 +3,10 @@ import Header from "./components/Header";
 import PostForm from "./components/PostForm";
 import PostList from "./components/PostList";
 import Footer from "./components/Footer";
+import Loading from "./components/Loading";
 import { getPosts, createPost } from "./api/api";
+import ErrorMessage from "./components/ErrorMessage";
+import GetPostButton from "./components/GetPostButton";
 
 export type Post = {
   id: number;
@@ -15,6 +18,8 @@ function App() {
   const [newPost, setNewPost] = useState<Post>({ id: 0, title: "" });
   const [error, setError] = useState<null | string>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
 
   const handleGetPosts = async () => {
     setLoading(true);
@@ -50,6 +55,28 @@ function App() {
     }
   };
 
+  const handleUpdatePost = async (id: number, title: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/posts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update the post.");
+      }
+
+      const updatedPost = await response.json();
+      setPosts((prevPost) =>
+        prevPost.map((post) => (post.id === id ? updatedPost : post))
+      );
+      setEditingPostId(null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleDeletePost = async (id: number) => {
     setLoading(true);
     setError(null);
@@ -79,33 +106,35 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
       <Header />
-      {loading ? (
-        <div className="flex justify-center items-center h-full">
-          <div className="text-xl font-semibold text-gray-600 animate-pulse">
-            Loading posts...
+
+      <main>
+        {loading ? (
+          <Loading />
+        ) : (
+          <div className="flex flex-col items-center p-6">
+            <PostForm
+              newPost={newPost}
+              setNewPost={setNewPost}
+              createPost={handleCreatePost}
+            />
+            <GetPostButton handleGetPosts={handleGetPosts} />
+
+            {/* DISPLAY IF THERE IS AN ERROR */}
+            {error && <ErrorMessage error={error} />}
+
+            <PostList
+              posts={posts}
+              handleDeletePost={handleDeletePost}
+              handleUpdatePost={handleUpdatePost}
+              editingPostId={editingPostId}
+              setEditingPostId={setEditingPostId}
+              editingTitle={editingTitle}
+              setEditingTitle={setEditingTitle}
+            />
           </div>
-        </div>
-      ) : (
-        <main className="flex flex-col items-center p-6">
-          <PostForm
-            newPost={newPost}
-            setNewPost={setNewPost}
-            createPost={handleCreatePost}
-          />
-          <button
-            onClick={handleGetPosts}
-            className="px-6 py-2 bg-gray-800 text-white font-medium rounded-md hover:bg-gray-700 transition-all duration-300 mb-6"
-          >
-            Load All Posts
-          </button>
-          {error && (
-            <div className="text-red-600 font-medium mt-4 text-center">
-              {error}
-            </div>
-          )}
-          <PostList posts={posts} handleDeletePost={handleDeletePost} />
-        </main>
-      )}
+        )}
+      </main>
+
       <Footer />
     </div>
   );
